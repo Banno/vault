@@ -136,6 +136,10 @@
 		{
 			"ImportPath": "golang.org/x/oauth2",
 			"Rev": "ec6d5d770f531108a6464462b2201b74fcd09314"
+		},
+		{
+			"ImportPath": "github.com/banno/go-marathon",
+			"Rev": "ccf9200361b77d3056a19d66f6f002860d62432a"
 		}
 	]
 }
