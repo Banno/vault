@@ -228,6 +228,10 @@
 		{
 			"ImportPath": "gopkg.in/inf.v0",
 			"Rev": "3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4"
+		},
+		{
+			"ImportPath": "github.com/gambol99/go-marathon",
+			"Rev": "0ba31bcb0d7633ba1888d744c42990eb15281cf1"
 		}
 	]
 }
