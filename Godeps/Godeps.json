@@ -1,6 +1,7 @@
 {
 	"ImportPath": "github.com/hashicorp/vault",
 	"GoVersion": "go1.6",
+	"GodepVersion": "v65",
 	"Packages": [
 		"./..."
 	],
@@ -211,6 +212,10 @@
 			"Rev": "6e7f3d73dade2e5566f87d18c3a1d00d2ce33421"
 		},
 		{
+			"ImportPath": "github.com/donovanhide/eventsource",
+			"Rev": "c3f57f280ec708df24886d9e62f2fd178d69d8e8"
+		},
+		{
 			"ImportPath": "github.com/duosecurity/duo_api_golang",
 			"Rev": "16da9e74793f6d9b97b227a0696fe32bcdaecb42"
 		},
@@ -221,6 +226,10 @@
 		{
 			"ImportPath": "github.com/fatih/structs",
 			"Rev": "12ff68a6f48a1c8bd118316171545683337655df"
+		},
+		{
+			"ImportPath": "github.com/gambol99/go-marathon",
+			"Rev": "0ba31bcb0d7633ba1888d744c42990eb15281cf1"
 		},
 		{
 			"ImportPath": "github.com/ghodss/yaml",
