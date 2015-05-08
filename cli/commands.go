@@ -16,6 +16,7 @@ import (
 	credLdap "github.com/hashicorp/vault/builtin/credential/ldap"
 	credOkta "github.com/hashicorp/vault/builtin/credential/okta"
 	credRadius "github.com/hashicorp/vault/builtin/credential/radius"
+	credMarathon "github.com/hashicorp/vault/builtin/credential/marathon"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 
 	"github.com/hashicorp/vault/builtin/logical/aws"
@@ -78,6 +79,7 @@ func Commands(metaPtr *meta.Meta) map[string]cli.CommandFactory {
 					"ldap":     credLdap.Factory,
 					"okta":     credOkta.Factory,
 					"radius":   credRadius.Factory,
+					"marathon": credMarathon.Factory,
 				},
 				LogicalBackends: map[string]logical.Factory{
 					"aws":        aws.Factory,
@@ -119,6 +121,7 @@ func Commands(metaPtr *meta.Meta) map[string]cli.CommandFactory {
 					"okta":     &credOkta.CLIHandler{},
 					"cert":     &credCert.CLIHandler{},
 					"radius":   &credUserpass.CLIHandler{DefaultMount: "radius"},
+					"marathon": &credMarathon.CLIHandler{},
 				},
 			}, nil
 		},
