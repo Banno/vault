@@ -1,6 +1,7 @@
 {
 	"ImportPath": "github.com/hashicorp/vault",
 	"GoVersion": "go1.6",
+	"GodepVersion": "v62",
 	"Packages": [
 		"./..."
 	],
@@ -221,6 +222,15 @@
 		{
 			"ImportPath": "github.com/fatih/structs",
 			"Rev": "12ff68a6f48a1c8bd118316171545683337655df"
+		},
+		{
+			"ImportPath": "github.com/gambol99/go-marathon",
+			"Rev": "0ba31bcb0d7633ba1888d744c42990eb15281cf1"
+		},
+		{
+			"ImportPath": "github.com/gambol99/go-marathon",
+			"Comment": "v0.0.1-40-g52466f3",
+			"Rev": "52466f39391c90839b2a75715d5c5af68b7e7502"
 		},
 		{
 			"ImportPath": "github.com/ghodss/yaml",
