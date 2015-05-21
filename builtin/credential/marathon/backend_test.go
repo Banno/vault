@@ -1,9 +1,12 @@
 package marathon
 
 import (
+	"fmt"
 	"os"
 	"testing"
+	"time"
 
+	"github.com/Banno/go-marathon"
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 )
@@ -14,51 +17,78 @@ func TestBackend_basic(t *testing.T) {
 		Backend:  Backend(),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
-			testAccMap(t),
 			testAccLogin(t),
 		},
 	})
 }
 
 func testAccPreCheck(t *testing.T) {
-	if v := os.Getenv("GITHUB_TOKEN"); v == "" {
-		t.Fatal("GITHUB_USER must be set for acceptance tests")
-	}
-
-	if v := os.Getenv("GITHUB_ORG"); v == "" {
-		t.Fatal("GITHUB_ORG must be set for acceptance tests")
+	if v := os.Getenv("MARATHON_HOST"); v == "" {
+		t.Fatal("MARATHON_HOST must be set for acceptance tests")
 	}
 }
 
 func testAccStepConfig(t *testing.T) logicaltest.TestStep {
+	marathonUrl := fmt.Sprintf("http://%s:8080", os.Getenv("MARATHON_HOST"))
+
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
 		Path:      "config",
 		Data: map[string]interface{}{
-			"organization": os.Getenv("GITHUB_ORG"),
-		},
-	}
-}
-
-func testAccMap(t *testing.T) logicaltest.TestStep {
-	return logicaltest.TestStep{
-		Operation: logical.WriteOperation,
-		Path:      "map/teams/default",
-		Data: map[string]interface{}{
-			"value": "foo",
+			"marathon_url": marathonUrl,
 		},
 	}
 }
 
 func testAccLogin(t *testing.T) logicaltest.TestStep {
+	marathonUrl := os.Getenv("MARATHON_HOST")
+
+	c := marathon.NewClient(marathonUrl, 8080)
+
+	appId := "test-app"
+
+	c.AppDelete(appId, true)
+
+	time.Sleep(time.Second * 1)
+
+	appMutable := marathon.AppMutable{
+		Id:   appId,
+		Cpus: 0.01,
+		Mem:  256,
+		Container: &marathon.Container{
+			Docker: &marathon.Docker{
+				Image: "registry.banno-internal.com/small-deployable:latest",
+			},
+			Type: "DOCKER",
+		},
+	}
+
+	_, err := c.AppCreate(appMutable)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	time.Sleep(time.Second * 6)
+
+	appRead, err := c.AppRead(appId)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	appVersion := appRead.Tasks[0].Version
+	taskId := appRead.Tasks[0].TaskId
+
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
 		Path:      "login",
 		Data: map[string]interface{}{
-			"token": os.Getenv("GITHUB_TOKEN"),
+			"marathon_app_id":      appId,
+			"marathon_app_version": appVersion,
+			"mesos_task_id":        taskId,
 		},
 		Unauthenticated: true,
 
-		Check: logicaltest.TestCheckAuth([]string{"foo"}),
+		Check: logicaltest.TestCheckAuth([]string{appId}),
 	}
 }
