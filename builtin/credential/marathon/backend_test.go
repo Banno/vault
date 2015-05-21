@@ -1,7 +1,6 @@
 package marathon
 
 import (
-	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -23,13 +22,13 @@ func TestBackend_basic(t *testing.T) {
 }
 
 func testAccPreCheck(t *testing.T) {
-	if v := os.Getenv("MARATHON_HOST"); v == "" {
-		t.Fatal("MARATHON_HOST must be set for acceptance tests")
+	if v := os.Getenv("MARATHON_URL"); v == "" {
+		t.Fatal("MARATHON_URL must be set for acceptance tests")
 	}
 }
 
 func testAccStepConfig(t *testing.T) logicaltest.TestStep {
-	marathonUrl := fmt.Sprintf("http://%s:8080", os.Getenv("MARATHON_HOST"))
+	marathonUrl := os.Getenv("MARATHON_URL")
 
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
@@ -41,9 +40,9 @@ func testAccStepConfig(t *testing.T) logicaltest.TestStep {
 }
 
 func testAccLogin(t *testing.T) logicaltest.TestStep {
-	marathonUrl := os.Getenv("MARATHON_HOST")
+	marathonUrl := os.Getenv("MARATHON_URL")
 
-	c := marathon.NewClient(marathonUrl, 8080)
+	c := marathon.NewClientForUrl(marathonUrl)
 
 	appId := "test-app"
 
