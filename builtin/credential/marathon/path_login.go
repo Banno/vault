@@ -39,47 +39,31 @@ func pathLogin(b *backend) *framework.Path {
 
 func (b *backend) pathLogin(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	// Get all our stored state
-	config, err := b.Config(req.Storage)
-	if err != nil {
-		return nil, err
-	}
 
-	if config.MarathonUrl == "" {
-		return logical.ErrorResponse(
-			"configure the marathon credential backend first"), nil
+	client, err := getMarathonClientFromConfig(b, req)
+
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	appId := data.Get("marathon_app_id").(string)
 	appVersion := data.Get("marathon_app_version").(string)
 	taskId := data.Get("mesos_task_id").(string)
 
-	client, err := b.Client(config.MarathonUrl)
 	if err != nil {
 		return nil, err
 	}
 
-	// Get marathon task data
-	app, err := client.AppRead(appId)
+	appTask, err := getAppTaskFromValues(client, appId, appVersion)
+
 	if err != nil {
 		return nil, err
 	}
 
-	found := false
-	for _, appTask := range app.Tasks {
-		if appTask.Version == appVersion {
-			found = true
+	_, err = appTaskStartedWithinThreshold(appTask)
 
-			_, err := appTaskStartedWithinThreshold(&appTask)
-			if err != nil {
-				return nil, err
-			}
-			break
-		}
-	}
-
-	if !found {
-		return nil, errors.New("App version not found")
+	if err != nil {
+		return nil, err
 	}
 
 	policyName := strings.TrimPrefix(appId, "/")
@@ -93,8 +77,41 @@ func (b *backend) pathLogin(
 				"mesos_task_id":        taskId,
 			},
 			DisplayName: appId,
+			LeaseOptions: logical.LeaseOptions{
+				Renewable: true,
+				Lease:     time.Minute * 5,
+			},
 		},
 	}, nil
+}
+
+func getMarathonClientFromConfig(b *backend, req *logical.Request) (*marathon.Client, error) {
+	// Get all our stored state
+	config, err := b.Config(req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	if config.MarathonUrl == "" {
+		return nil, errors.New("configure the marathon credential backend first")
+	}
+	return b.Client(config.MarathonUrl)
+}
+
+func getAppTaskFromValues(client *marathon.Client, appId string, appVersion string) (*marathon.AppTask, error) {
+	// Get marathon task data
+	app, err := client.AppRead(appId)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, appTask := range app.Tasks {
+		if appTask.Version == appVersion {
+			return &appTask, nil
+		}
+	}
+
+	return nil, errors.New("App version not found")
 }
 
 func appTaskStartedWithinThreshold(appTask *marathon.AppTask) (bool, error) {
@@ -103,4 +120,31 @@ func appTaskStartedWithinThreshold(appTask *marathon.AppTask) (bool, error) {
 		return false, errors.New("App did not startup within threshold")
 	}
 	return true, nil
+}
+
+func (b *backend) pathLoginRenew(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+
+	appId := req.Auth.Metadata["marathon_app_id"]
+	appVersion := req.Auth.Metadata["marathon_app_version"]
+
+	client, err := getMarathonClientFromConfig(b, req)
+
+	if err != nil {
+		return nil, err
+	}
+
+	appTask, err := getAppTaskFromValues(client, appId, appVersion)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if appTask == nil {
+		// not sure if this is necessary, but if appTask is nil,
+		// do not renew
+		return nil, nil
+	}
+
+	return framework.LeaseExtend(1*time.Hour, 0)(req, d)
 }

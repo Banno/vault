@@ -29,6 +29,8 @@ func Backend() *framework.Backend {
 				"login",
 			},
 		},
+
+		AuthRenew: b.pathLoginRenew,
 	}
 
 	return b.Backend
