@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Banno/go-marathon"
+	marathon "github.com/gambol99/go-marathon"
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 )
@@ -42,41 +42,41 @@ func testAccStepConfig(t *testing.T) logicaltest.TestStep {
 func testAccLogin(t *testing.T) logicaltest.TestStep {
 	marathonUrl := os.Getenv("MARATHON_URL")
 
-	c := marathon.NewClientForUrl(marathonUrl)
+	config := marathon.NewDefaultConfig()
+	config.URL = marathonUrl
+	config.LogOutput = os.Stdout
+	c, err := marathon.NewClient(config)
+
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	appId := "test-app"
 
-	c.AppDelete(appId, true)
+	c.DeleteApplication(appId)
 
 	time.Sleep(time.Second * 1)
 
-	appMutable := marathon.AppMutable{
-		Id:   appId,
-		Cpus: 0.01,
-		Mem:  256,
-		Container: &marathon.Container{
-			Docker: &marathon.Docker{
-				Image: "registry.banno-internal.com/small-deployable:latest",
-			},
-			Type: "DOCKER",
-		},
-	}
+	application := marathon.NewDockerApplication()
+	application.Name(appId)
+	application.CPU(0.1).Memory(256).Count(1)
+	application.Container.Docker.Container("alpine")
+	application.Container.Docker.Network = "HOST"
 
-	_, err := c.AppCreate(appMutable)
-	if err != nil {
+	if err := c.CreateApplication(application, true); err != nil {
 		t.Fatal(err)
 	}
 
 	time.Sleep(time.Second * 6)
 
-	appRead, err := c.AppRead(appId)
+	appRead, err := c.Application(appId)
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	appVersion := appRead.Tasks[0].Version
-	taskId := appRead.Tasks[0].TaskId
+	taskId := appRead.Tasks[0].ID
 
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
