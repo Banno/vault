@@ -59,6 +59,7 @@ func testAccLogin(t *testing.T) logicaltest.TestStep {
 
 	application := marathon.NewDockerApplication()
 	application.Name(appId)
+	application.Arg("sleep").Arg("10000")
 	application.CPU(0.1).Memory(256).Count(1)
 	application.Container.Docker.Container("alpine")
 	application.Container.Docker.Network = "HOST"
