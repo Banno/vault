@@ -3,8 +3,9 @@ package marathon
 import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"os"
 
-	"github.com/banno/go-marathon"
+	marathon "github.com/gambol99/go-marathon"
 )
 
 func Factory(map[string]string) (logical.Backend, error) {
@@ -42,9 +43,15 @@ type backend struct {
 
 // Client returns the Marathon client to communicate to Marathon
 func (b *backend) Client(marathonUrl string) (*marathon.Client, error) {
-	client := marathon.NewClientForUrl(marathonUrl)
+	config := marathon.NewDefaultConfig()
+	config.URL = marathonUrl
+	config.LogOutput = os.Stdout
 
-	return client, nil
+	if client, err := marathon.NewClient(config); err != nil {
+		return nil, err
+	} else {
+		return client, nil
+	}
 }
 
 const backendHelp = `

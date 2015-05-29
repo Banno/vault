@@ -2,7 +2,7 @@ package marathon
 
 import (
 	"errors"
-	"github.com/banno/go-marathon"
+	marathon "github.com/gambol99/go-marathon"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"strings"
@@ -98,24 +98,32 @@ func getMarathonClientFromConfig(b *backend, req *logical.Request) (*marathon.Cl
 	return b.Client(config.MarathonUrl)
 }
 
-func getAppTaskFromValues(client *marathon.Client, appId string, appVersion string) (*marathon.AppTask, error) {
+func getAppTaskFromValues(client *marathon.Client, appId string, appVersion string) (*marathon.Task, error) {
 	// Get marathon task data
-	app, err := client.AppRead(appId)
+	app, err := client.Application(appId)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, appTask := range app.Tasks {
-		if appTask.Version == appVersion {
-			return &appTask, nil
+	for _, task := range app.Tasks {
+		if task.Version == appVersion {
+			return task, nil
 		}
 	}
 
 	return nil, errors.New("App version not found")
 }
 
-func appTaskStartedWithinThreshold(appTask *marathon.AppTask) (bool, error) {
-	delta := time.Now().Sub(appTask.StartedAt)
+func appTaskStartedWithinThreshold(appTask *marathon.Task) (bool, error) {
+	startedAt, e := time.Parse(
+		time.RFC3339,
+		appTask.StartedAt)
+
+	if e != nil {
+		return false, e
+	}
+
+	delta := time.Now().Sub(startedAt)
 	if delta > StartupThresholdSeconds {
 		return false, errors.New("App did not startup within threshold")
 	}
