@@ -62,7 +62,6 @@ func testAccLogin(t *testing.T) logicaltest.TestStep {
 	application.Arg("sleep").Arg("10000")
 	application.CPU(0.1).Memory(256).Count(1)
 	application.Container.Docker.Container("alpine")
-	application.Container.Docker.Network = "HOST"
 
 	if err := c.CreateApplication(application, true); err != nil {
 		t.Fatal(err)
