@@ -2,6 +2,7 @@ package marathon
 
 import (
 	"errors"
+	"fmt"
 	marathon "github.com/gambol99/go-marathon"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -120,7 +121,7 @@ func appTaskStartedWithinThreshold(appTask *marathon.Task) (bool, error) {
 		appTask.StartedAt)
 
 	if e != nil {
-		return false, e
+		return false, errors.New(fmt.Sprintf("Failed to validate app startup time: %s", e.Error()))
 	}
 
 	delta := time.Now().Sub(startedAt)
