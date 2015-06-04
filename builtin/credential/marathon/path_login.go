@@ -67,17 +67,17 @@ func (b *backend) pathLogin(
 		return nil, err
 	}
 
-	policyName := strings.TrimPrefix(appId, "/")
+	appName := strings.TrimPrefix(appId, "/")
 
 	return &logical.Response{
 		Auth: &logical.Auth{
-			Policies: []string{policyName},
+			Policies: []string{appName},
 			Metadata: map[string]string{
-				"marathon_app_id":      appId,
+				"marathon_app_id":      appName,
 				"marathon_app_version": appVersion,
 				"mesos_task_id":        taskId,
 			},
-			DisplayName: appId,
+			DisplayName: appName,
 			LeaseOptions: logical.LeaseOptions{
 				Renewable: true,
 				Lease:     time.Minute * 5,
