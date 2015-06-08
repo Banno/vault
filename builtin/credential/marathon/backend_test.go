@@ -10,7 +10,7 @@ import (
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 )
 
-func TestBackend_basic(t *testing.T) {
+func TestBackend_login(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
 		Backend:  Backend(),
@@ -25,16 +25,21 @@ func testAccPreCheck(t *testing.T) {
 	if v := os.Getenv("MARATHON_URL"); v == "" {
 		t.Fatal("MARATHON_URL must be set for acceptance tests")
 	}
+	if v := os.Getenv("MESOS_URL"); v == "" {
+		t.Fatal("MARATHON_URL must be set for acceptance tests")
+	}
 }
 
 func testAccStepConfig(t *testing.T) logicaltest.TestStep {
 	marathonUrl := os.Getenv("MARATHON_URL")
+	mesosUrl := os.Getenv("MESOS_URL")
 
 	return logicaltest.TestStep{
 		Operation: logical.WriteOperation,
 		Path:      "config",
 		Data: map[string]interface{}{
 			"marathon_url": marathonUrl,
+			"mesos_url":    mesosUrl,
 		},
 	}
 }

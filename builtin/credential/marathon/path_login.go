@@ -69,6 +69,13 @@ func (b *backend) pathLogin(
 
 	appName := strings.TrimPrefix(appId, "/")
 
+	mesosUrl, err := getMesosUrl(b, req)
+	_, err = SlaveTaskIdIsValid(mesosUrl, taskId)
+
+	if err != nil {
+		return nil, err
+	}
+
 	return &logical.Response{
 		Auth: &logical.Auth{
 			Policies: []string{appName},
@@ -86,7 +93,7 @@ func (b *backend) pathLogin(
 	}, nil
 }
 
-func getMarathonClientFromConfig(b *backend, req *logical.Request) (marathon.Marathon, error) {
+func validateConfigIsConfigured(b *backend, req *logical.Request) (*config, error) {
 	// Get all our stored state
 	config, err := b.Config(req.Storage)
 	if err != nil {
@@ -94,9 +101,34 @@ func getMarathonClientFromConfig(b *backend, req *logical.Request) (marathon.Mar
 	}
 
 	if config.MarathonUrl == "" {
-		return nil, errors.New("configure the marathon credential backend first")
+		return nil, errors.New("configure the marathon credential backend first: missing marathon_url")
 	}
+
+	if config.MesosUrl == "" {
+		return nil, errors.New("configure the marathon credential backend first: missing mesos_url")
+	}
+
+	return config, nil
+}
+
+func getMarathonClientFromConfig(b *backend, req *logical.Request) (marathon.Marathon, error) {
+	config, err := validateConfigIsConfigured(b, req)
+
+	if err != nil {
+		return nil, err
+	}
+
 	return b.Client(config.MarathonUrl)
+}
+
+func getMesosUrl(b *backend, req *logical.Request) (string, error) {
+	config, err := validateConfigIsConfigured(b, req)
+
+	if err != nil {
+		return "", err
+	}
+
+	return config.MesosUrl, nil
 }
 
 func getAppTaskFromValues(client marathon.Marathon, appId string, appVersion string) (*marathon.Task, error) {
@@ -153,6 +185,13 @@ func (b *backend) pathLoginRenew(
 		// not sure if this is necessary, but if appTask is nil,
 		// do not renew
 		return nil, nil
+	}
+
+	mesosUrl, err := getMesosUrl(b, req)
+	_, err = SlaveTaskIdIsValid(mesosUrl, appTask.ID)
+
+	if err != nil {
+		return nil, err
 	}
 
 	return framework.LeaseExtend(5*time.Minute, 0)(req, d)
