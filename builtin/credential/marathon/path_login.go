@@ -86,7 +86,7 @@ func (b *backend) pathLogin(
 	}, nil
 }
 
-func getMarathonClientFromConfig(b *backend, req *logical.Request) (*marathon.Client, error) {
+func getMarathonClientFromConfig(b *backend, req *logical.Request) (marathon.Marathon, error) {
 	// Get all our stored state
 	config, err := b.Config(req.Storage)
 	if err != nil {
@@ -99,7 +99,7 @@ func getMarathonClientFromConfig(b *backend, req *logical.Request) (*marathon.Cl
 	return b.Client(config.MarathonUrl)
 }
 
-func getAppTaskFromValues(client *marathon.Client, appId string, appVersion string) (*marathon.Task, error) {
+func getAppTaskFromValues(client marathon.Marathon, appId string, appVersion string) (*marathon.Task, error) {
 	// Get marathon task data
 	app, err := client.Application(appId)
 	if err != nil {

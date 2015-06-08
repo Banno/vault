@@ -78,6 +78,8 @@ type Marathon interface {
 	TaskEndpoints(name string, port int, health_check bool) ([]string, error)
 	/* kill all the tasks for any application */
 	KillApplicationTasks(application_id, hostname string, scale bool) (*Tasks, error)
+	/* kill a single task */
+	KillTask(application_id, task_id string, scale bool) (*Task, error)
 
 	/* --- GROUPS --- */
 
@@ -173,7 +175,7 @@ type Message struct {
 	Message string `json:"message"`
 }
 
-func NewClient(config Config) (*Client, error) {
+func NewClient(config Config) (Marathon, error) {
 	/* step: we parse the url and build a cluster */
 	if cluster, err := NewMarathonCluster(config.URL); err != nil {
 		return nil, err
@@ -327,6 +329,9 @@ func (client *Client) httpCall(method, uri, body string) (int, string, *http.Res
 		if request, err := http.NewRequest(method, url, strings.NewReader(body)); err != nil {
 			return 0, "", nil, err
 		} else {
+			if client.config.HttpBasicAuthUser != "" {
+				request.SetBasicAuth(client.config.HttpBasicAuthUser, client.config.HttpBasicPassword)
+			}
 			request.Header.Add("Content-Type", "application/json")
 			request.Header.Add("Accept", "application/json")
 			var content string
