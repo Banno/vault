@@ -52,19 +52,19 @@ func (b *backend) pathLogin(
 	taskId := data.Get("mesos_task_id").(string)
 
 	if err != nil {
-		return nil, err
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	appTask, err := getAppTaskFromValues(client, appId, appVersion)
 
 	if err != nil {
-		return nil, err
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	_, err = appTaskStartedWithinThreshold(appTask)
 
 	if err != nil {
-		return nil, err
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	appName := strings.TrimPrefix(appId, "/")
@@ -73,7 +73,7 @@ func (b *backend) pathLogin(
 	_, err = SlaveTaskIdIsValid(mesosUrl, taskId)
 
 	if err != nil {
-		return nil, err
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	return &logical.Response{
