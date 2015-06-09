@@ -32,7 +32,7 @@ func SlaveTaskIdIsValid(mesosUrl string, slaveTaskId string) (bool, error) {
 	var taskSlaveId string
 	for _, framework := range data.Frameworks {
 		for _, task := range framework.Tasks {
-			if task.Id == slaveTaskId {
+			if task.Id == slaveTaskId && task.State == "TASK_RUNNING" {
 				taskSlaveId = task.SlaveId
 				break
 			}
