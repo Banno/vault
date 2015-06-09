@@ -48,9 +48,3 @@ func SlaveTaskIdIsValid(mesosUrl string, slaveTaskId string) (bool, error) {
 
 	return true, nil
 }
-
-// func main() {
-// 	ip, _ := GetHostNameForSlaveTaskId("http://dev.banno.com:5050", "smaller-deployable.79b291e7-0bb5-11e5-a6dd-0242ac1100c2")
-
-// 	fmt.Println(ip)
-// }
