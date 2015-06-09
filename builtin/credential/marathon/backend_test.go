@@ -38,7 +38,7 @@ func testAccPreCheck(t *testing.T) {
 		t.Fatal("MARATHON_URL must be set for acceptance tests")
 	}
 	if v := os.Getenv("MESOS_URL"); v == "" {
-		t.Fatal("MARATHON_URL must be set for acceptance tests")
+		t.Fatal("MESOS_URL must be set for acceptance tests")
 	}
 }
 
