@@ -42,7 +42,7 @@ type backend struct {
 }
 
 // Client returns the Marathon client to communicate to Marathon
-func (b *backend) Client(marathonUrl string) (*marathon.Client, error) {
+func (b *backend) Client(marathonUrl string) (marathon.Marathon, error) {
 	config := marathon.NewDefaultConfig()
 	config.URL = marathonUrl
 	config.LogOutput = os.Stdout

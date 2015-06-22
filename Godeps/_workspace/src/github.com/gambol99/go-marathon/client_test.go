@@ -31,3 +31,12 @@ func TestGetMarathonURL(t *testing.T) {
 	client := NewFakeMarathonEndpoint(t)
 	assertOnString(client.GetMarathonURL(), FAKE_MARATHON_URL, t)
 }
+
+func TestClientImplementsMarathon(t *testing.T) {
+	client := NewFakeMarathonEndpoint(t)
+
+	client.DeleteApplication("stuff")
+
+	var _ Marathon = (*Client)(nil)
+
+}

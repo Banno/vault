@@ -13,7 +13,11 @@ func pathConfig() *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"marathon_url": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "The organization users must be part of",
+				Description: "The Marathon URL to use for validation",
+			},
+			"mesos_url": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "The Mesos URL to use for validation",
 			},
 		},
 
@@ -27,6 +31,7 @@ func pathConfigWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	entry, err := logical.StorageEntryJSON("config", config{
 		MarathonUrl: data.Get("marathon_url").(string),
+		MesosUrl:    data.Get("mesos_url").(string),
 	})
 	if err != nil {
 		return nil, err
@@ -58,4 +63,5 @@ func (b *backend) Config(s logical.Storage) (*config, error) {
 
 type config struct {
 	MarathonUrl string `json:"marathon_url"`
+	MesosUrl    string `json:"mesos_url"`
 }
