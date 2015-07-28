@@ -194,5 +194,5 @@ func (b *backend) pathLoginRenew(
 		return nil, err
 	}
 
-	return framework.LeaseExtend(5*time.Minute, 0)(req, d)
+	return framework.LeaseExtend(5*time.Minute, 0, false)(req, d)
 }
