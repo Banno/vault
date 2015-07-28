@@ -8,8 +8,8 @@ import (
 	marathon "github.com/gambol99/go-marathon"
 )
 
-func Factory(map[string]string) (logical.Backend, error) {
-	return Backend(), nil
+func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
+	return Backend().Setup(conf)
 }
 
 func Backend() *framework.Backend {
