@@ -22,12 +22,16 @@ func (c *ReadCommand) Run(args []string) int {
 	}
 
 	args = flags.Args()
-	if len(args) < 1 || len(args) > 2 {
-		c.Ui.Error("read expects one or two arguments")
+	if len(args) != 1 {
+		c.Ui.Error("read expects one argument")
 		flags.Usage()
 		return 1
 	}
+
 	path := args[0]
+	if path[0] == '/' {
+		path = path[1:]
+	}
 
 	client, err := c.Client()
 	if err != nil {
@@ -80,25 +84,14 @@ Usage: vault read [options] path
 
 General Options:
 
-  -address=addr           The address of the Vault server.
-
-  -ca-cert=path           Path to a PEM encoded CA cert file to use to
-                          verify the Vault server SSL certificate.
-
-  -ca-path=path           Path to a directory of PEM encoded CA cert files
-                          to verify the Vault server SSL certificate. If both
-                          -ca-cert and -ca-path are specified, -ca-path is used.
-
-  -tls-skip-verify        Do not verify TLS certificate. This is highly
-                          not recommended. This is especially not recommended
-                          for unsealing a vault.
+  ` + generalOptionsUsage() + `
 
 Read Options:
 
   -format=table           The format for output. By default it is a whitespace-
                           delimited table. This can also be json.
 
-  -field=field            If included, the raw value of the specified field 
+  -field=field            If included, the raw value of the specified field
   						  will be output raw to stdout.
 
 `

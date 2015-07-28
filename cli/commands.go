@@ -2,6 +2,8 @@ package cli
 
 import (
 	"os"
+	"os/signal"
+	"syscall"
 
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	auditSyslog "github.com/hashicorp/vault/builtin/audit/syslog"
@@ -14,8 +16,10 @@ import (
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 
 	"github.com/hashicorp/vault/builtin/logical/aws"
+	"github.com/hashicorp/vault/builtin/logical/cassandra"
 	"github.com/hashicorp/vault/builtin/logical/consul"
 	"github.com/hashicorp/vault/builtin/logical/mysql"
+	"github.com/hashicorp/vault/builtin/logical/pki"
 	"github.com/hashicorp/vault/builtin/logical/postgresql"
 	"github.com/hashicorp/vault/builtin/logical/transit"
 
@@ -67,14 +71,17 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 					"aws":        aws.Factory,
 					"consul":     consul.Factory,
 					"postgresql": postgresql.Factory,
+					"cassandra":  cassandra.Factory,
+					"pki":        pki.Factory,
 					"transit":    transit.Factory,
 					"mysql":      mysql.Factory,
 				},
+				ShutdownCh: makeShutdownCh(),
 			}, nil
 		},
 
-		"help": func() (cli.Command, error) {
-			return &command.HelpCommand{
+		"path-help": func() (cli.Command, error) {
+			return &command.PathHelpCommand{
 				Meta: meta,
 			}, nil
 		},
@@ -87,6 +94,7 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 					"userpass": &credUserpass.CLIHandler{},
 					"ldap":     &credLdap.CLIHandler{},
 					"marathon": &credMarathon.CLIHandler{},
+					"cert":     &credCert.CLIHandler{},
 				},
 			}, nil
 		},
@@ -270,4 +278,21 @@ func Commands(metaPtr *command.Meta) map[string]cli.CommandFactory {
 			return &tokenDisk.Command{}, nil
 		},
 	}
+}
+
+// makeShutdownCh returns a channel that can be used for shutdown
+// notifications for commands. This channel will send a message for every
+// interrupt or SIGTERM received.
+func makeShutdownCh() <-chan struct{} {
+	resultCh := make(chan struct{})
+
+	signalCh := make(chan os.Signal, 4)
+	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		for {
+			<-signalCh
+			resultCh <- struct{}{}
+		}
+	}()
+	return resultCh
 }

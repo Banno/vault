@@ -110,7 +110,7 @@ func NewSystemBackend(core *Core) logical.Backend {
 						Description: strings.TrimSpace(sysHelp["lease_id"][0]),
 					},
 					"increment": &framework.FieldSchema{
-						Type:        framework.TypeInt,
+						Type:        framework.TypeDurationSecond,
 						Description: strings.TrimSpace(sysHelp["increment"][0]),
 					},
 				},
@@ -741,7 +741,7 @@ func (b *SystemBackend) handleKeyStatus(
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"term":         info.Term,
-			"install_time": info.InstallTime,
+			"install_time": info.InstallTime.Format(time.RFC3339),
 		},
 	}
 	return resp, nil

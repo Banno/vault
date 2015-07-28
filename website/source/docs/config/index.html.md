@@ -22,6 +22,11 @@ listener "tcp" {
   address = "127.0.0.1:8200"
   tls_disable = 1
 }
+
+telemetry {
+  statsite_address = "127.0.0.1:8125"
+  disable_hostname = true
+}
 ```
 
 After the configuration is written, use the `-config` flag with `vault server`
@@ -41,11 +46,8 @@ to specify where the configuration is.
   server from executing the `mlock` syscall to prevent memory from being
   swapped to disk. This is not recommended in production (see below).
 
-* `statsite_addr` (optional) - An address to a [Statsite](https://github.com/armon/statsite)
-  instances for metrics. This is highly recommended for production usage.
-
-* `statsd_addr` (optional) - This is the same as `statsite_addr` but
-  for StatsD.
+* `telemetry` (optional)  - Configures the telemetry reporting system
+  (see below).
 
 In production, you should only consider setting the `disable_mlock` option
 on Linux systems that only use encrypted swap or do not use swap at all.
@@ -67,14 +69,16 @@ durability, etc.
       backend supports HA. It is the most recommended backend for Vault
       and has been shown to work at high scale under heavy load.
 
-  * `zookeeper` - Store data within [Zookeeper](https://zookeeper.apache.org/).
-      This backend does not support HA.
-
   * `etcd` - Store data within [etcd](https://coreos.com/etcd/).
-      This backend does not support HA.
+      This backend supports HA.
+
+  * `zookeeper` - Store data within [Zookeeper](https://zookeeper.apache.org/).
+      This backend supports HA.
 
   * `s3` - Store data within an S3 bucket [S3](http://aws.amazon.com/s3/).
       This backend does not support HA.
+
+  * `mysql` - Store data within MySQL. This backend does not support HA.
 
   * `inmem` - Store data in-memory. This is only really useful for
       development and experimentation. Data is lost whenever Vault is
@@ -141,7 +145,24 @@ For S3, the following options are supported:
 
   * `secret_key` - (required) The AWS secret key. It must be provided, but it can also be sourced from the AWS_SECRET_ACCESS_KEY environment variable.
 
+  * `session_token` - (optional) The AWS session_token. It can also be sourced from the AWS_SESSION_TOKEN environment variable.
+
   * `region` (optional) - The AWS region. It can be sourced from the AWS_DEFAULT_REGION environment variable and will default to "us-east-1" if not specified.
+
+#### Backend Reference: MySQL
+
+The MySQL backend has the following options:
+
+  * `username` (required) - The MySQL username to connect with.
+
+  * `password` (required) - The MySQL password to connect with.
+
+  * `address` (optional) - The address of the MySQL host. Defaults to
+    "127.0.0.1:3306.
+
+  * `database` (optional) - The name of the database to use. Defaults to "vault".
+
+  * `table` (optional) - The name of the table to use. Defaults to "vault".
 
 #### Backend Reference: Inmem
 
@@ -173,3 +194,23 @@ The supported options are:
 
   * `tls_key_file` (required unless disabled) - The path to the private key
       for the certificate.
+      
+  * `tls_min_version` (optional) - If provided, specifies the minimum
+      supported version of TLS. Accepted values are "tls10", "tls11"
+      or "tls12". This defaults to "tls12". WARNING: TLS 1.1 and lower
+      are generally considered less secure; avoid using these if
+      possible.
+
+## Telemetry Reference
+
+For the `telemetry` section, there is no resource name. All configuration
+is within the object itself.
+
+* `statsite_address` (optional) - An address to a [Statsite](https://github.com/armon/statsite)
+  instances for metrics. This is highly recommended for production usage.
+
+* `statsd_address` (optional) - This is the same as `statsite_address` but
+  for StatsD.
+  
+* `disable_hostname` (optional) - Whether or not to prepend runtime telemetry
+  with the machines hostname. This is a global option. Defaults to false.

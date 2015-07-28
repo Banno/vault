@@ -114,6 +114,15 @@ func (c *AuthCommand) Run(args []string) int {
 		return 0
 	}
 
+	// Warn if the VAULT_TOKEN environment variable is set, as that will take
+	// precedence
+	if os.Getenv("VAULT_TOKEN") != "" {
+		c.Ui.Output("==> WARNING: VAULT_TOKEN environment variable set!\n")
+		c.Ui.Output("  The environment variable takes precedence over the value")
+		c.Ui.Output("  set by the auth command. Either update the value of the")
+		c.Ui.Output("  environment variable or unset it to use the new token.\n")
+	}
+
 	var vars map[string]string
 	if len(args) > 0 {
 		builder := kvbuilder.Builder{Stdin: os.Stdin}
@@ -242,21 +251,17 @@ Usage: vault auth [options] [token or config...]
   By specifying -method, alternate authentication methods can be used
   such as OAuth or TLS certificates. For these, additional values for
   configuration can be specified with "key=value" pairs just like
-  "vault write".
+  "vault write". Specify the "-method-help" flag to get help for a specific
+  method.
+
+  If you've mounted a credential backend to a different path, such
+  as mounting "github" to "github-private", the "method" flag should
+  still be "github." Most credential providers support the "mount" option
+  to specify the mount point. See the "-method-help" for more info.
 
 General Options:
 
-  -address=addr           The address of the Vault server.
-
-  -ca-cert=path           Path to a PEM encoded CA cert file to use to
-                          verify the Vault server SSL certificate.
-
-  -ca-path=path           Path to a directory of PEM encoded CA cert files
-                          to verify the Vault server SSL certificate. If both
-                          -ca-cert and -ca-path are specified, -ca-path is used.
-
-  -tls-skip-verify        Do not verify TLS certificate. This is highly
-                          not recommended.
+  ` + generalOptionsUsage() + `
 
 Auth Options:
 

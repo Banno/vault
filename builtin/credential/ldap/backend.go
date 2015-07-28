@@ -2,15 +2,14 @@ package ldap
 
 import (
 	"fmt"
-	"strings"
 
+	"github.com/go-ldap/ldap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"github.com/vanackere/ldap"
 )
 
-func Factory(map[string]string) (logical.Backend, error) {
-	return Backend(), nil
+func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
+	return Backend().Setup(conf)
 }
 
 func Backend() *framework.Backend {
@@ -22,6 +21,7 @@ func Backend() *framework.Backend {
 			Root: []string{
 				"config",
 				"groups/*",
+				"users/*",
 			},
 
 			Unauthenticated: []string{
@@ -33,6 +33,7 @@ func Backend() *framework.Backend {
 			pathLogin(&b),
 			pathConfig(&b),
 			pathGroups(&b),
+			pathUsers(&b),
 		}),
 
 		AuthRenew: b.pathLoginRenew,
@@ -43,6 +44,40 @@ func Backend() *framework.Backend {
 
 type backend struct {
 	*framework.Backend
+}
+
+func EscapeLDAPValue(input string) string {
+	// RFC4514 forbids un-escaped:
+	// - leading space or hash
+	// - trailing space
+	// - special characters '"', '+', ',', ';', '<', '>', '\\'
+	// - null
+	for i := 0; i < len(input); i++ {
+		escaped := false
+		if input[i] == '\\' {
+			i++
+			escaped = true
+		}
+		switch input[i] {
+		case '"', '+', ',', ';', '<', '>', '\\':
+			if !escaped {
+				input = input[0:i] + "\\" + input[i:]
+				i++
+			}
+			continue
+		}
+		if escaped {
+			input = input[0:i] + "\\" + input[i:]
+			i++
+		}
+	}
+	if input[0] == ' ' || input[0] == '#' {
+		input = "\\" + input
+	}
+	if input[len(input)-1] == ' ' {
+		input = input[0:len(input)-1] + "\\ "
+	}
+	return input
 }
 
 func (b *backend) Login(req *logical.Request, username string, password string) ([]string, *logical.Response, error) {
@@ -61,9 +96,32 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	}
 
 	// Try to authenticate to the server using the provided credentials
-	binddn := fmt.Sprintf("%s=%s,%s", cfg.UserAttr, username, cfg.UserDN)
+	binddn := ""
+	if cfg.UPNDomain != "" {
+		binddn = fmt.Sprintf("%s@%s", EscapeLDAPValue(username), cfg.UPNDomain)
+	} else {
+		binddn = fmt.Sprintf("%s=%s,%s", cfg.UserAttr, EscapeLDAPValue(username), cfg.UserDN)
+	}
 	if err = c.Bind(binddn, password); err != nil {
 		return nil, logical.ErrorResponse(fmt.Sprintf("LDAP bind failed: %v", err)), nil
+	}
+
+	userdn := ""
+	if cfg.UPNDomain != "" {
+		// Find the distinguished name for the user if userPrincipalName used for login
+		sresult, err := c.Search(&ldap.SearchRequest{
+			BaseDN: cfg.UserDN,
+			Scope:  2, // subtree
+			Filter: fmt.Sprintf("(userPrincipalName=%s)", binddn),
+		})
+		if err != nil {
+			return nil, logical.ErrorResponse(fmt.Sprintf("LDAP search failed: %v", err)), nil
+		}
+		for _, e := range sresult.Entries {
+			userdn = e.DN
+		}
+	} else {
+		userdn = binddn
 	}
 
 	// Enumerate all groups the user is member of. The search filter should
@@ -71,7 +129,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	sresult, err := c.Search(&ldap.SearchRequest{
 		BaseDN: cfg.GroupDN,
 		Scope:  2, // subtree
-		Filter: fmt.Sprintf("(|(memberUid=%s)(member=%s)(uniqueMember=%s))", username, binddn, binddn),
+		Filter: fmt.Sprintf("(|(memberUid=%s)(member=%s)(uniqueMember=%s))", username, userdn, userdn),
 	})
 	if err != nil {
 		return nil, logical.ErrorResponse(fmt.Sprintf("LDAP search failed: %v", err)), nil
@@ -79,11 +137,22 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 
 	var allgroups []string
 	var policies []string
+
+	user, err := b.User(req.Storage, username)
+	if err == nil && user != nil {
+		allgroups = append(allgroups, user.Groups...)
+	}
+
 	for _, e := range sresult.Entries {
-		// Expected syntax for group DN: cn=groupanem,ou=Group,dc=example,dc=com
-		dn := strings.Split(e.DN, ",")
-		gname := strings.SplitN(dn[0], "=", 2)[1]
+		dn, err := ldap.ParseDN(e.DN)
+		if err != nil || len(dn.RDNs) == 0 || len(dn.RDNs[0].Attributes) == 0 {
+			continue
+		}
+		gname := dn.RDNs[0].Attributes[0].Value
 		allgroups = append(allgroups, gname)
+	}
+
+	for _, gname := range allgroups {
 		group, err := b.Group(req.Storage, gname)
 		if err == nil && group != nil {
 			policies = append(policies, group.Policies...)
