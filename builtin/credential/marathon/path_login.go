@@ -41,6 +41,8 @@ func pathLogin(b *backend) *framework.Path {
 func (b *backend) pathLogin(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 
+	loginTime := time.Now()
+	
 	client, err := getMarathonClientFromConfig(b, req)
 
 	if err != nil {
@@ -61,7 +63,7 @@ func (b *backend) pathLogin(
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	_, err = appTaskStartedWithinThreshold(appTask)
+	_, err = appTaskStartedWithinThreshold(appTask, loginTime)
 
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -147,7 +149,7 @@ func getAppTaskFromValues(client marathon.Marathon, appId string, appVersion str
 	return nil, errors.New("App version not found")
 }
 
-func appTaskStartedWithinThreshold(appTask *marathon.Task) (bool, error) {
+func appTaskStartedWithinThreshold(appTask *marathon.Task, loginTime time.Time) (bool, error) {
 	startedAt, e := time.Parse(
 		time.RFC3339,
 		appTask.StartedAt)
@@ -156,7 +158,7 @@ func appTaskStartedWithinThreshold(appTask *marathon.Task) (bool, error) {
 		return false, errors.New(fmt.Sprintf("Failed to validate app startup time: %s", e.Error()))
 	}
 
-	delta := time.Now().Sub(startedAt)
+	delta := loginTime.Sub(startedAt)
 	if delta > StartupThresholdSeconds {
 		return false, errors.New("App did not startup within threshold")
 	}
