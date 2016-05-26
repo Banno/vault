@@ -1,48 +1,41 @@
 package marathon
 
 import (
-	"encoding/json"
 	"errors"
-	"io/ioutil"
-	"net/http"
+	"fmt"
+	"net/url"
+	"strings"
+
+	"github.com/andygrunwald/megos"
 )
 
-type Task struct {
-	Id      string `json:"id"`
-	State   string `json:"state"`
-	SlaveId string `json:"slave_id"`
-}
+// SlaveTaskIDIsValid ensure a valid task is running with taskID
+func SlaveTaskIDIsValid(mesosURL string, taskID string) (bool, error) {
 
-type Framework struct {
-	Tasks []Task `json:"tasks"`
-}
+	mesosURLs := strings.Split(mesosURL, ",")
+	var urls []*url.URL
 
-type MesosState struct {
-	Frameworks []Framework `json:"frameworks"`
-}
+	for _, mesosURL := range mesosURLs {
+		url, err := url.Parse(mesosURL)
 
-func SlaveTaskIdIsValid(mesosUrl string, slaveTaskId string) (bool, error) {
-	res, _ := http.Get(mesosUrl + "/state.json")
-	defer res.Body.Close()
-	body, _ := ioutil.ReadAll(res.Body)
-
-	var data MesosState
-	_ = json.Unmarshal(body, &data)
-
-	var taskSlaveId string
-	for _, framework := range data.Frameworks {
-		for _, task := range framework.Tasks {
-			if task.Id == slaveTaskId && task.State == "TASK_RUNNING" {
-				taskSlaveId = task.SlaveId
-				break
-			}
+		if err != nil {
+			return false, errors.New(fmt.Sprintf("Invalid mesos url %s", mesosURL))
 		}
-		if taskSlaveId != "" {
-			break
-		}
+		urls = append(urls, url)
 	}
 
-	if taskSlaveId == "" {
+	mesos := megos.NewClient(urls)
+	_, err := mesos.DetermineLeader()
+
+	if err != nil {
+		return false, errors.New("No mesos master available!")
+	}
+
+	state, _ := mesos.GetStateFromLeader()
+	framework, _ := mesos.GetFrameworkByPrefix(state.Frameworks, "marathon")
+	_, err = mesos.GetTaskByID(framework.Tasks, taskID)
+
+	if err != nil {
 		return false, errors.New("Slave Task ID not found!")
 	}
 
