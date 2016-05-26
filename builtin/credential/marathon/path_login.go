@@ -3,11 +3,12 @@ package marathon
 import (
 	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	marathon "github.com/gambol99/go-marathon"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"strings"
-	"time"
 )
 
 const (

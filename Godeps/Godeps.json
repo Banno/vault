@@ -1,10 +1,7 @@
 {
 	"ImportPath": "github.com/hashicorp/vault",
 	"GoVersion": "go1.6",
-	"GodepVersion": "v65",
-	"Packages": [
-		"./..."
-	],
+	"GodepVersion": "v71",
 	"Deps": [
 		{
 			"ImportPath": "github.com/armon/go-metrics",
@@ -90,11 +87,6 @@
 			"Rev": "4151ef572710e04d25d9385114b33847ba6a923a"
 		},
 		{
-			"ImportPath": "github.com/aws/aws-sdk-go/private/protocol/ec2query",
-			"Comment": "v1.1.10",
-			"Rev": "4151ef572710e04d25d9385114b33847ba6a923a"
-		},
-		{
 			"ImportPath": "github.com/aws/aws-sdk-go/private/protocol/json/jsonutil",
 			"Comment": "v1.1.10",
 			"Rev": "4151ef572710e04d25d9385114b33847ba6a923a"
@@ -146,11 +138,6 @@
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute",
-			"Comment": "v1.1.10",
-			"Rev": "4151ef572710e04d25d9385114b33847ba6a923a"
-		},
-		{
-			"ImportPath": "github.com/aws/aws-sdk-go/service/ec2",
 			"Comment": "v1.1.10",
 			"Rev": "4151ef572710e04d25d9385114b33847ba6a923a"
 		},
@@ -229,7 +216,7 @@
 		},
 		{
 			"ImportPath": "github.com/gambol99/go-marathon",
-			"Rev": "0ba31bcb0d7633ba1888d744c42990eb15281cf1"
+			"Rev": "7df556dd84200ce1e474864e312266716125aee1"
 		},
 		{
 			"ImportPath": "github.com/ghodss/yaml",

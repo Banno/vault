@@ -2,7 +2,12 @@ package marathon
 
 import (
 	"errors"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -31,15 +36,11 @@ func buildBackend(t *testing.T) logical.Backend {
 }
 
 func TestBackend_login(t *testing.T) {
-	if os.Getenv("MARATHON_URL") == "" {
-		t.Skip("MARATHON_URL not set")
-	}
-
 	logicaltest.Test(t, logicaltest.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
 		Backend:  buildBackend(t),
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t),
+			testAccStepConfig(t, nil),
 			testAccLogin(t, AppID),
 		},
 		Teardown: func() error {
@@ -49,16 +50,36 @@ func TestBackend_login(t *testing.T) {
 }
 
 func TestBackend_invalid(t *testing.T) {
-	if os.Getenv("MARATHON_URL") == "" {
-		t.Skip("MARATHON_URL not set")
-	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		PreCheck: func() { testAccPreCheck(t) },
+		Backend:  buildBackend(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t, nil),
+			testAccLoginInvalid(t, AppID),
+		},
+		Teardown: func() error {
+			return tearDown(AppID)
+		},
+	})
+}
+
+func TestBackend_multiple_marathon(t *testing.T) {
+
+	// setup http mock server
+	fakeMarathon := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, `{"version":"0.28.0","git_sha":"961edbd82e691a619a4c171a7aadc9c32957fa73","git_tag":"0.28.0","build_date":"2016-03-17 17:45:11","build_time":1458236711.0,"build_user":"root","start_time":1462460944.44985,"id":"0b1472ec-7dad-4bcf-9214-683760553cea","pid":"master@10.10.3.91:5050","hostname":"mesos-master1-aws.uat.banno-internal.com","activated_slaves":0.0,"deactivated_slaves":0.0,"cluster":"uat","leader":"master@10.10.1.226:5050","log_dir":"\/var\/log\/mesos-master","flags":{"allocation_interval":"500ms","allocator":"HierarchicalDRF","authenticate":"false","authenticate_http":"false","authenticate_slaves":"false","authenticators":"crammd5","authorizers":"local","cluster":"uat","framework_sorter":"drf","help":"false","hostname":"mesos-master1-aws.uat.banno-internal.com","hostname_lookup":"true","http_authenticators":"basic","initialize_driver_logging":"true","ip":"10.10.3.91","log_auto_initialize":"true","log_dir":"\/var\/log\/mesos-master","logbufsecs":"0","logging_level":"INFO","max_completed_frameworks":"50","max_completed_tasks_per_framework":"1000","max_slave_ping_timeouts":"5","offer_timeout":"1secs","port":"5050","quiet":"false","quorum":"1","recovery_slave_removal_limit":"100%","registry":"replicated_log","registry_fetch_timeout":"1mins","registry_store_timeout":"20secs","registry_strict":"false","roles":"daemon","root_submissions":"true","slave_ping_timeout":"15secs","slave_reregister_timeout":"10mins","user_sorter":"drf","version":"false","webui_dir":"\/usr\/share\/mesos\/webui","weights":"daemon=2","work_dir":"\/tmp\/mesos-master","zk":"zk:\/\/zookeeper0-aws.uat.banno-internal.com:2181,zookeeper1-aws.uat.banno-internal.com:2181,zookeeper2-aws.uat.banno-internal.com:2181\/mesos","zk_session_timeout":"10secs"},"slaves":[],"frameworks":[],"completed_frameworks":[],"orphan_tasks":[],"unregistered_frameworks":[]}`)
+		ioutil.WriteFile("/tmp/marathon.test", []byte("done"), 0644)
+	}))
+	defer fakeMarathon.Close()
+
+	deadMarathonURL := "http://127.0.0.1:9090"
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
 		Backend:  buildBackend(t),
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t),
-			testAccLoginInvalid(t, AppID),
+			testAccStepConfig(t, &deadMarathonURL),
+			testAccLogin(t, AppID),
 		},
 		Teardown: func() error {
 			return tearDown(AppID)
@@ -75,8 +96,14 @@ func testAccPreCheck(t *testing.T) {
 	}
 }
 
-func testAccStepConfig(t *testing.T) logicaltest.TestStep {
-	marathonURL := os.Getenv("MARATHON_URL")
+func testAccStepConfig(t *testing.T, nonLeaderURL *string) logicaltest.TestStep {
+	mesosURLs := []string{os.Getenv("MARATHON_URL")}
+
+	if nonLeaderURL != nil {
+		mesosURLs = append([]string{*nonLeaderURL}, mesosURLs...)
+	}
+
+	marathonURL := strings.Join(mesosURLs, ",")
 	mesosURL := os.Getenv("MESOS_URL")
 
 	return logicaltest.TestStep{
@@ -180,7 +207,7 @@ func startTestTask(c marathon.Marathon, appID string) (*marathon.Task, error) {
 	stopTestTask(c, appID)
 
 	time.Sleep(time.Second * 2)
-	
+
 	application := marathon.NewDockerApplication()
 	application.Name(appID)
 	application.AddArgs("sleep").AddArgs("10000")
