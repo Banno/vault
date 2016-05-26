@@ -3,11 +3,12 @@ package marathon
 import (
 	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	marathon "github.com/gambol99/go-marathon"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"strings"
-	"time"
 )
 
 const (
@@ -72,7 +73,7 @@ func (b *backend) pathLogin(
 	appName := strings.TrimPrefix(appId, "/")
 
 	mesosUrl, err := getMesosUrl(b, req)
-	_, err = SlaveTaskIdIsValid(mesosUrl, taskId)
+	_, err = SlaveTaskIDIsValid(mesosUrl, taskId)
 
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -190,7 +191,7 @@ func (b *backend) pathLoginRenew(
 	}
 
 	mesosUrl, err := getMesosUrl(b, req)
-	_, err = SlaveTaskIdIsValid(mesosUrl, appTask.ID)
+	_, err = SlaveTaskIDIsValid(mesosUrl, appTask.ID)
 
 	if err != nil {
 		return nil, err
