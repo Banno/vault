@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	StartupThresholdSeconds = time.Second * 300
+	StartupThresholdSeconds = time.Second * 600
 )
 
 func pathLogin(b *backend) *framework.Path {
